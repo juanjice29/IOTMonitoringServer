@@ -15,9 +15,9 @@ def analyze_data():
     # Consulta todos los datos de la última hora, los agrupa por estación y variable
     # Compara el promedio con los valores límite que están en la base de datos para esa variable.
     # Si el promedio se excede de los límites, se envia un mensaje de alerta.
-
+    
     print("Calculando alertas...")
-
+    now = datetime.now()
     data = Data.objects.filter(
         base_time__gte=datetime.now() - timedelta(hours=1))
     aggregation = data.annotate(check_value=Avg('avg_value')) \
@@ -56,13 +56,27 @@ def analyze_data():
             print(datetime.now(), "Sending alert to {} {}".format(topic, variable))
             client.publish(topic, message)
             alerts += 1
-         # Nueva condición específica (por ejemplo, temperatura)
-        if variable == "temperatura" and (check_value > 26 or check_value < min_value):
-            # Acción para el nuevo evento (encender un LED o similar)
-            new_topic = '{}/{}/{}/{}/led'.format(country, state, city,user)
-            new_message = "ON"
-            client.publish(new_topic, new_message)
-            print(f"Mensaje enviado a dispositivo: {new_message}")
+         
+         # Nuevo analizis de datos para temperatura
+         # Nueva condición específica para temperatura
+        if variable == "temperatura":
+            # Consultar datos de temperatura en los últimos 5 segundos
+            five_seconds_ago = now - timedelta(seconds=10)
+            recent_data = Data.objects.filter(
+                base_time__gte=five_seconds_ago,
+                station__location__city__name=city,
+                station__location__state__name=state,
+                station__location__country__name=country,
+                measurement__name="temperatura"
+            ).values_list('avg_value', flat=True)
+            
+            # Verificar si todos los valores están por encima de 26 grados
+            if len(recent_data) == 10 and all(value > 26 for value in recent_data):
+                new_topic = '{}/{}/{}/{}/led'.format(country, state, city, user)
+                new_message = "ON"
+                client.publish(new_topic, new_message)
+                print(f"Alerta: Temperatura superior a 26°C durante 10 segundos. Mensaje enviado a dispositivo: {new_message}")
+
 
     
 
