@@ -69,7 +69,7 @@ def analyze_data():
                 station__location__country__name=country,
                 measurement__name="temperatura"
             ).values_list('avg_value', flat=True)
-            
+            print("analizando valores de temperatura",recent_data.values_list('avg_value', flat=True))
             # Verificar si todos los valores están por encima de 26 grados
             if len(recent_data) == 10 and all(value > 26 for value in recent_data):
                 new_topic = '{}/{}/{}/{}/led'.format(country, state, city, user)
