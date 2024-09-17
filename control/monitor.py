@@ -37,6 +37,8 @@ def analyze_data():
         alert = False
 
         variable = item["measurement__name"]
+        check_value = item["check_value"]
+
         max_value = item["measurement__max_value"] or 0
         min_value = item["measurement__min_value"] or 0
 
@@ -54,6 +56,15 @@ def analyze_data():
             print(datetime.now(), "Sending alert to {} {}".format(topic, variable))
             client.publish(topic, message)
             alerts += 1
+         # Nueva condición específica (por ejemplo, temperatura)
+        if variable == "temperatura" and (check_value > max_value or check_value < min_value):
+            # Acción para el nuevo evento (encender un LED o similar)
+            new_topic = '{}/{}/{}/{}/led'.format(country, state, city,user)
+            new_message = "ON"
+            client.publish(new_topic, new_message)
+            print(f"Mensaje enviado a dispositivo: {new_message}")
+
+    
 
     print(len(aggregation), "dispositivos revisados")
     print(alerts, "alertas enviadas")
