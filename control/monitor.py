@@ -7,7 +7,7 @@ import paho.mqtt.client as mqtt
 import schedule
 import time
 from django.conf import settings
-
+from collections import defaultdict
 client = mqtt.Client(settings.MQTT_USER_PUB)
 
 
@@ -57,25 +57,38 @@ def analyze_data():
             client.publish(topic, message)
             alerts += 1
          
-         # Nuevo analizis de datos para temperatura
-         # Nueva condición específica para temperatura
-        if variable == "temperatura":
-            # Consultar datos de temperatura en los últimos 5 segundos
-            five_seconds_ago = now - timedelta(seconds=10)
-            recent_data = Data.objects.filter(
-                base_time__gte=five_seconds_ago,
-                station__location__city__name=city,
-                station__location__state__name=state,
-                station__location__country__name=country,
-                measurement__name="temperatura"
-            ).values_list('avg_value', flat=True)
-            print("analizando valores de temperatura",recent_data.values_list('avg_value', flat=True))
-            # Verificar si todos los valores están por encima de 26 grados
-            if len(recent_data) == 10 and all(value > 26 for value in recent_data):
-                new_topic = '{}/{}/{}/{}/led'.format(country, state, city, user)
-                new_message = "ON"
-                client.publish(new_topic, new_message)
-                print(f"Alerta: Temperatura superior a 26°C durante 10 segundos. Mensaje enviado a dispositivo: {new_message}")
+    five_seconds_ago = now - timedelta(seconds=10)
+    temperature_data = Data.objects.filter(
+        base_time__gte=five_seconds_ago,
+        measurement__name="temperatura"
+    ).values('avg_value', 'station__user__username',
+             'station__location__city__name',
+             'station__location__state__name',
+             'station__location__country__name')
+
+    # Agrupar datos por estación y ubicación
+    
+    recent_temperatures = defaultdict(list)
+    
+    for entry in temperature_data:
+        country = entry['station__location__country__name']
+        state = entry['station__location__state__name']
+        city = entry['station__location__city__name']
+        user = entry['station__user__username']
+        value = entry['avg_value']
+        key = (country, state, city, user)
+        recent_temperatures[key].append(value)
+    
+    # Verificar condiciones para las alertas de temperatura
+    for key, values in recent_temperatures.items():
+        country, state, city, user = key
+        
+        # Verificar si todos los valores están por encima de 26 grados
+        if len(values) >= 10 and all(value > 26 for value in values):
+            new_topic = '{}/{}/{}/{}/led'.format(country, state, city, user)
+            new_message = "ON"
+            client.publish(new_topic, new_message)
+            print(f"Alerta: Temperatura superior a 26°C durante 10 segundos. Mensaje enviado a dispositivo: {new_message}")
 
 
     
