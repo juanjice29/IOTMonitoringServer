@@ -59,7 +59,7 @@ def analyze_data():
          
         if variable == "temperatura":
             print("analizando temperatura")
-            if (check_value > max_value or check_value < min_value):
+            if (check_value > 26 or check_value < min_value):
                 # Acción para el nuevo evento (encender un LED o similar)
                 new_topic = '{}/{}/{}/{}/led'.format(country, state, city, user)
                 new_message = "ON"
@@ -121,7 +121,7 @@ def start_cron():
     Inicia el cron que se encarga de ejecutar la función analyze_data cada 5 minutos.
     '''
     print("Iniciando cron...")
-    schedule.every(5).minutes.do(analyze_data)
+    schedule.every(1).minutes.do(analyze_data)
     print("Servicio de control iniciado")
     while 1:
         schedule.run_pending()
