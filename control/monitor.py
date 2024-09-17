@@ -57,8 +57,7 @@ def analyze_data():
             client.publish(topic, message)
             alerts += 1
          
-        if variable == "temperatura":
-            print("analizando temperatura")
+        if variable == "temperatura":            
             if (check_value > 26 or check_value < min_value):
                 # Acción para el nuevo evento (encender un LED o similar)
                 new_topic = '{}/{}/{}/{}/led'.format(country, state, city, user)
